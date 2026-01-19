@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distribution Control Tower - Garden of Grace</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SheetJS untuk Export/Import Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- PapaParse untuk CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .is-late { background-color: #fee2e2; border-left: 4px solid #ef4444; }
+        .is-safe { background-color: #f0fdf4; border-left: 4px solid #22c55e; }
+        .is-warning { background-color: #fefce8; border-left: 4px solid #eab308; }
+        
+        .nav-item.active { background-color: #ecfdf5; color: #047857; border-right: 3px solid #059669; }
+        .nav-item { cursor: pointer; transition: all 0.2s; }
+        .nav-item:hover { background-color: #f8fafc; }
+        
+        /* Modal Animation */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-animate { animation: fadeIn 0.2s ease-out; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col shadow-lg z-20 flex-shrink-0">
+        <!-- Header Sidebar -->
+        <div class="p-6 border-b border-slate-100 bg-emerald-900 text-white">
+            <div class="flex items-center gap-2 mb-1">
+                <i data-lucide="package-check" class="w-6 h-6 text-emerald-300"></i>
+                <h1 class="text-xl font-black tracking-tight">GARDEN OF GRACE</h1>
+            </div>
+            <p class="text-[10px] font-bold text-emerald-200 tracking-[0.2em] uppercase">Distribution Control Tower</p>
+        </div>
+
+        <!-- Navigation Menu -->
+        <div class="px-4 py-4 border-b border-slate-100 space-y-1">
+            <div onclick="switchView('heymale')" id="navHeymale" class="nav-item active flex items-center gap-3 p-3 rounded-md text-sm font-bold text-slate-600">
+                <i data-lucide="shirt" class="w-4 h-4"></i>
+                Heymale Planner
+            </div>
+            <div onclick="switchView('heylocal')" id="navHeylocal" class="nav-item flex items-center gap-3 p-3 rounded-md text-sm font-bold text-slate-600">
+                <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                Heylocal Planner
+            </div>
+            <div onclick="switchView('summary')" id="navSummary" class="nav-item flex items-center gap-3 p-3 rounded-md text-sm font-bold text-slate-600">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                Executive Summary
+            </div>
+        </div>
+
+        <!-- Scrollable Controls -->
+        <div class="flex-1 overflow-y-auto p-5 space-y-6">
+            
+             <!-- SECTION: GLOBAL SETTINGS -->
+             <div class="space-y-3">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="settings-2" class="w-3 h-3"></i> Global Settings
+                </h3>
+                
+                <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                    <label class="block text-[10px] font-bold text-emerald-600 uppercase mb-1">Selesai Produksi (Start)</label>
+                    <input type="date" id="dateProduction" onchange="updateGlobalDate('production', this.value)" class="w-full text-sm p-2 rounded border border-emerald-200 bg-emerald-50 text-emerald-800 font-bold outline-none">
+                </div>
+            </div>
+
+             <!-- SECTION: ACTIONS -->
+             <div class="space-y-3">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <i data-lucide="zap" class="w-3 h-3"></i> Data Actions
+                </h3>
+                
+                <!-- NEW FEATURE: OPTIMIZER -->
+                <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                    <button onclick="optimizeCurrentView()" class="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded text-xs font-bold transition shadow-sm mb-2">
+                        <i data-lucide="wand-2" class="w-3 h-3"></i> Auto-Optimize Budget
+                    </button>
+                    <p class="text-[9px] text-indigo-700 leading-tight text-center">
+                        Pilih ekspedisi termurah yang aman secara otomatis.
+                    </p>
+                </div>
+
+                <div class="h-px bg-slate-200 my-2"></div>
+
+                <!-- IMPORT MASTER DATA (CSV) -->
+                <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
+                    <label class="block text-[10px] font-bold text-emerald-700 uppercase mb-2">
+                        <i data-lucide="database" class="w-3 h-3 inline mr-1"></i> Update Data SKU (CSV)
+                    </label>
+                    <button onclick="document.getElementById('csvInput').click()" class="w-full flex items-center justify-center gap-2 bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 px-3 py-2 rounded text-xs font-bold transition">
+                        Upload 8 File CSV
+                    </button>
+                    <input type="file" id="csvInput" accept=".csv" multiple class="hidden" onchange="handleCSVImport(this)">
+                    <p class="text-[9px] text-emerald-600 mt-2 leading-tight">
+                        Upload CSV untuk melihat <b>Rincian SKU</b> per toko. Total Qty & Berat utama sudah terisi otomatis.
+                    </p>
+                </div>
+
+                <div class="h-px bg-slate-200 my-2"></div>
+
+                <!-- IMPORT PLANNER STATE -->
+                <button onclick="exportData()" class="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded text-xs font-bold transition shadow-sm">
+                    <i data-lucide="download" class="w-3 h-3"></i> Save/Export Planner
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer Sidebar -->
+        <div class="p-4 bg-slate-50 border-t border-slate-200">
+            <div class="text-[10px] font-bold text-slate-500 uppercase mb-1">Total Biaya (Page Ini)</div>
+            <div id="sidebarTotalCost" class="text-xl font-black text-slate-800">Rp 0</div>
+            <div class="mt-2 flex gap-2">
+                <div class="px-2 py-1 bg-red-100 text-red-700 rounded text-[10px] font-bold flex items-center gap-1">
+                    <span id="sidebarCountLate">0</span> Late
+                </div>
+                <div class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold flex items-center gap-1">
+                    <span id="sidebarCountSafe">0</span> Aman
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col bg-slate-100 overflow-hidden relative">
+        
+        <!-- Top Toolbar -->
+        <header class="bg-white h-16 border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
+            <h2 class="text-lg font-bold text-slate-700 flex items-center gap-2">
+                <span id="pageTitle" class="text-emerald-600">Heymale Planner</span>
+                <span class="text-slate-300">/</span>
+                <span id="pageSubtitle" class="text-xs text-slate-400 font-normal">Menampilkan Semua Series</span>
+            </h2>
+            <div class="flex items-center gap-3">
+                <div class="text-right mr-2">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">System Status</p>
+                    <p class="text-xs font-bold text-emerald-600 flex items-center gap-1 justify-end">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Online
+                    </p>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTAINER UNTUK KONTEN DINAMIS -->
+        <div id="dynamicContent" class="flex-1 overflow-auto p-6 space-y-8 pb-20">
+            <!-- Content will be injected here by JS -->
+        </div>
+
+    </main>
+
+    <!-- SKU DETAIL MODAL -->
+    <div id="skuModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm modal-animate">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden">
+            <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <div>
+                    <h3 id="modalTitle" class="font-bold text-lg text-slate-800">Rincian SKU</h3>
+                    <p id="modalSubtitle" class="text-xs text-slate-500 font-mono">Store Name</p>
+                </div>
+                <button onclick="closeSkuModal()" class="p-2 hover:bg-slate-200 rounded-full transition">
+                    <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-auto p-0">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-500 sticky top-0">
+                        <tr>
+                            <th class="p-4 font-bold">Article</th>
+                            <th class="p-4 font-bold">Size</th>
+                            <th class="p-4 font-bold">Color</th>
+                            <th class="p-4 font-bold text-right">Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modalTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                        <!-- Rows injected here -->
+                    </tbody>
+                    <tfoot class="bg-slate-50 border-t border-slate-200 sticky bottom-0">
+                        <tr>
+                            <td colspan="3" class="p-4 font-bold text-right text-xs uppercase text-slate-500">Total Qty</td>
+                            <td id="modalTotalQty" class="p-4 font-bold text-right font-mono text-emerald-600">0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- 1. DATA MASTER ---
+
+    const productStructure = {
+        'HEYMALE': ['LUME SERIES', 'ORNA BLOOM', 'LACE IN MOTION', 'GARDEN OF GRACE'],
+        'HEYLOCAL': ['LUME SERIES', 'ORNA BLOOM', 'LACE IN MOTION', 'GARDEN OF GRACE']
+    };
+
+    // Updated Stores List (20 Stores for Heylocal now)
+    const storesList = [
+        // Heymale Stores (9 Stores)
+        { name: "Heymale Makassar", city: "MAKASSAR" },
+        { name: "Heymale Sungai Penuh", city: "JAMBI" },
+        { name: "Heymale Aceh", city: "ACEH" },
+        { name: "Heymale Sunplaza Medan", city: "MEDAN" },
+        { name: "Heymale Pekanbaru", city: "PEKANBARU" },
+        { name: "Heymale Padang", city: "PADANG" },
+        { name: "Heymale Puri", city: "JAKARTA" },
+        { name: "Heymale PIM", city: "JAKARTA" },
+        { name: "Heymale BXC", city: "TANGERANG" },
+        // Heylocal Stores (20 Stores - Added Jambi & Lampung)
+        { name: "HEYLOCAL BALIKPAPAN", city: "BALIKPAPAN" },
+        { name: "Heylocal Makassar", city: "MAKASSAR" },
+        { name: "Heylocal Samarinda", city: "SAMARINDA" },
+        { name: "Heylocal Sungai Penuh", city: "JAMBI" },
+        { name: "Heylocal Aceh", city: "ACEH" },
+        { name: "HEYLOCAL MEDAN OCBC", city: "MEDAN" },
+        { name: "Heylocal Sunplaza Medan", city: "MEDAN" },
+        { name: "Heylocal Pekanbaru", city: "PEKANBARU" },
+        { name: "Heylocal Padang", city: "PADANG" },
+        { name: "Heylocal Palembang", city: "PALEMBANG" },
+        { name: "HSC TP", city: "SURABAYA" },
+        { name: "Heylocal Sentul", city: "BOGOR" },
+        { name: "Heylocal Pakuwon Mall Bekasi", city: "BEKASI" },
+        { name: "Heylocal Summarecon Mall Bekasi", city: "BEKASI" },
+        { name: "Heylocal SuMaBa", city: "BANDUNG" },
+        { name: "HSC PIM", city: "JAKARTA" },
+        { name: "Heylocal BXC Deal POS", city: "TANGERANG" },
+        { name: "Heylocal Pejaten", city: "JAKARTA" },
+        { name: "Heylocal Lampung", city: "LAMPUNG" },
+        { name: "Heylocal Jambi", city: "JAMBI" }
+    ];
+
+    // Data Auto-Fill (Weight & Qty) - Hardcoded from User Data
+    const predefinedData = {
+        'HEYMALE': {
+            'LUME SERIES': { 'Heymale Makassar': { qty: 167, kg: 83.5 }, 'Heymale Sungai Penuh': { qty: 98, kg: 49 }, 'Heymale Aceh': { qty: 216, kg: 108 }, 'Heymale Sunplaza Medan': { qty: 120, kg: 60 }, 'Heymale Pekanbaru': { qty: 143, kg: 71.5 }, 'Heymale Padang': { qty: 225, kg: 112.5 }, 'Heymale Puri': { qty: 122, kg: 61 }, 'Heymale PIM': { qty: 177, kg: 88.5 }, 'Heymale BXC': { qty: 149, kg: 74.5 } },
+            'ORNA BLOOM': { 'Heymale Makassar': { qty: 387, kg: 193.5 }, 'Heymale Sungai Penuh': { qty: 253, kg: 126.5 }, 'Heymale Aceh': { qty: 523, kg: 261.5 }, 'Heymale Sunplaza Medan': { qty: 268, kg: 134 }, 'Heymale Pekanbaru': { qty: 320, kg: 160 }, 'Heymale Padang': { qty: 516, kg: 258 }, 'Heymale Puri': { qty: 263, kg: 131.5 }, 'Heymale PIM': { qty: 406, kg: 203 }, 'Heymale BXC': { qty: 342, kg: 171 } },
+            'LACE IN MOTION': { 'Heymale Makassar': { qty: 715, kg: 357.5 }, 'Heymale Sungai Penuh': { qty: 476, kg: 238 }, 'Heymale Aceh': { qty: 969, kg: 484.5 }, 'Heymale Sunplaza Medan': { qty: 488, kg: 244 }, 'Heymale Pekanbaru': { qty: 608, kg: 304 }, 'Heymale Padang': { qty: 972, kg: 486 }, 'Heymale Puri': { qty: 484, kg: 242 }, 'Heymale PIM': { qty: 765, kg: 382.5 }, 'Heymale BXC': { qty: 635, kg: 317.5 } },
+            'GARDEN OF GRACE': { 'Heymale Makassar': { qty: 294, kg: 147 }, 'Heymale Sungai Penuh': { qty: 200, kg: 100 }, 'Heymale Aceh': { qty: 408, kg: 204 }, 'Heymale Sunplaza Medan': { qty: 196, kg: 98 }, 'Heymale Pekanbaru': { qty: 250, kg: 125 }, 'Heymale Padang': { qty: 415, kg: 207.5 }, 'Heymale Puri': { qty: 205, kg: 102.5 }, 'Heymale PIM': { qty: 322, kg: 161 }, 'Heymale BXC': { qty: 264, kg: 132 } }
+        },
+        'HEYLOCAL': {
+            'LUME SERIES': { 'HEYLOCAL BALIKPAPAN': { qty: 153, kg: 76.5 }, 'Heylocal Makassar': { qty: 161, kg: 80.5 }, 'Heylocal Samarinda': { qty: 163, kg: 81.5 }, 'Heylocal Sungai Penuh': { qty: 99, kg: 49.5 }, 'Heylocal Aceh': { qty: 278, kg: 139 }, 'HEYLOCAL MEDAN OCBC': { qty: 145, kg: 72.5 }, 'Heylocal Sunplaza Medan': { qty: 167, kg: 83.5 }, 'Heylocal Pekanbaru': { qty: 175, kg: 87.5 }, 'Heylocal Padang': { qty: 247, kg: 123.5 }, 'Heylocal Palembang': { qty: 241, kg: 120.5 }, 'HSC TP': { qty: 127, kg: 63.5 }, 'Heylocal Sentul': { qty: 78, kg: 39 }, 'Heylocal Pakuwon Mall Bekasi': { qty: 97, kg: 48.5 }, 'Heylocal Summarecon Mall Bekasi': { qty: 97, kg: 48.5 }, 'Heylocal SuMaBa': { qty: 121, kg: 60.5 }, 'HSC PIM': { qty: 130, kg: 65 }, 'Heylocal BXC Deal POS': { qty: 161, kg: 80.5 }, 'Heylocal Pejaten': { qty: 167, kg: 83.5 }, 'Heylocal Lampung': { qty: 0, kg: 0 }, 'Heylocal Jambi': { qty: 0, kg: 0 } },
+            'ORNA BLOOM': { 'HEYLOCAL BALIKPAPAN': { qty: 353, kg: 176.5 }, 'Heylocal Makassar': { qty: 391, kg: 195.5 }, 'Heylocal Samarinda': { qty: 397, kg: 198.5 }, 'Heylocal Sungai Penuh': { qty: 239, kg: 119.5 }, 'Heylocal Aceh': { qty: 680, kg: 340 }, 'HEYLOCAL MEDAN OCBC': { qty: 334, kg: 167 }, 'Heylocal Sunplaza Medan': { qty: 404, kg: 202 }, 'Heylocal Pekanbaru': { qty: 431, kg: 215.5 }, 'Heylocal Padang': { qty: 599, kg: 299.5 }, 'Heylocal Palembang': { qty: 590, kg: 295 }, 'HSC TP': { qty: 306, kg: 153 }, 'Heylocal Sentul': { qty: 197, kg: 98.5 }, 'Heylocal Pakuwon Mall Bekasi': { qty: 234, kg: 117 }, 'Heylocal Summarecon Mall Bekasi': { qty: 234, kg: 117 }, 'Heylocal SuMaBa': { qty: 289, kg: 144.5 }, 'HSC PIM': { qty: 310, kg: 155 }, 'Heylocal BXC Deal POS': { qty: 389, kg: 194.5 }, 'Heylocal Pejaten': { qty: 401, kg: 200.5 }, 'Heylocal Lampung': { qty: 0, kg: 0 }, 'Heylocal Jambi': { qty: 0, kg: 0 } },
+            'LACE IN MOTION': { 'HEYLOCAL BALIKPAPAN': { qty: 561, kg: 280.5 }, 'Heylocal Makassar': { qty: 617, kg: 308.5 }, 'Heylocal Samarinda': { qty: 626, kg: 313 }, 'Heylocal Sungai Penuh': { qty: 361, kg: 180.5 }, 'Heylocal Aceh': { qty: 1053, kg: 526.5 }, 'HEYLOCAL MEDAN OCBC': { qty: 525, kg: 262.5 }, 'Heylocal Sunplaza Medan': { qty: 641, kg: 320.5 }, 'Heylocal Pekanbaru': { qty: 670, kg: 335 }, 'Heylocal Padang': { qty: 928, kg: 464 }, 'Heylocal Palembang': { qty: 922, kg: 461 }, 'HSC TP': { qty: 463, kg: 231.5 }, 'Heylocal Sentul': { qty: 288, kg: 144 }, 'Heylocal Pakuwon Mall Bekasi': { qty: 342, kg: 171 }, 'Heylocal Summarecon Mall Bekasi': { qty: 342, kg: 171 }, 'Heylocal SuMaBa': { qty: 423, kg: 211.5 }, 'HSC PIM': { qty: 498, kg: 249 }, 'Heylocal BXC Deal POS': { qty: 612, kg: 306 }, 'Heylocal Pejaten': { qty: 637, kg: 318.5 }, 'Heylocal Lampung': { qty: 0, kg: 0 }, 'Heylocal Jambi': { qty: 0, kg: 0 } },
+            'GARDEN OF GRACE': { 'HEYLOCAL BALIKPAPAN': { qty: 296, kg: 148 }, 'Heylocal Makassar': { qty: 322, kg: 161 }, 'Heylocal Samarinda': { qty: 325, kg: 162.5 }, 'Heylocal Sungai Penuh': { qty: 195, kg: 97.5 }, 'Heylocal Aceh': { qty: 562, kg: 281 }, 'HEYLOCAL MEDAN OCBC': { qty: 282, kg: 141 }, 'Heylocal Sunplaza Medan': { qty: 332, kg: 166 }, 'Heylocal Pekanbaru': { qty: 352, kg: 176 }, 'Heylocal Padang': { qty: 502, kg: 251 }, 'Heylocal Palembang': { qty: 485, kg: 242.5 }, 'HSC TP': { qty: 256, kg: 128 }, 'Heylocal Sentul': { qty: 156, kg: 78 }, 'Heylocal Pakuwon Mall Bekasi': { qty: 189, kg: 94.5 }, 'Heylocal Summarecon Mall Bekasi': { qty: 189, kg: 94.5 }, 'Heylocal SuMaBa': { qty: 236, kg: 118 }, 'HSC PIM': { qty: 260, kg: 130 }, 'Heylocal BXC Deal POS': { qty: 318, kg: 159 }, 'Heylocal Pejaten': { qty: 330, kg: 165 }, 'Heylocal Lampung': { qty: 0, kg: 0 }, 'Heylocal Jambi': { qty: 0, kg: 0 } }
+        }
+    };
+
+    const logisticsDB = {
+        'SURABAYA':     { kkl_l: {p:2175, e:3}, kkl_r: {p:2500, e:3}, cmc: {p:0, e:0}, jnt: {p:8600, e:3}, lalamove: {p:0, e:1} },
+        'MAKASSAR':     { kkl_l: {p:4000, e:14}, kkl_r: {p:5500, e:4}, cmc: {p:5500, e:4}, jnt: {p:8700, e:6} }, 
+        'BALIKPAPAN':   { kkl_l: {p:4200, e:14}, kkl_r: {p:6000, e:5}, cmc: {p:0, e:0}, jnt: {p:10100, e:6} },
+        'MEDAN':        { kkl_l: {p:4176, e:5}, kkl_r: {p:4800, e:5}, cmc: {p:6300, e:4}, jnt: {p:8700, e:6} },
+        'PADANG':       { kkl_l: {p:5220, e:6}, kkl_r: {p:6000, e:6}, cmc: {p:5900, e:3}, jnt: {p:9300, e:5} },
+        'PALEMBANG':    { kkl_l: {p:2175, e:4}, kkl_r: {p:2500, e:4}, cmc: {p:5300, e:2}, jnt: {p:10900, e:4} },
+        'PEKANBARU':    { kkl_l: {p:3915, e:6}, kkl_r: {p:4500, e:6}, cmc: {p:6200, e:3}, jnt: {p:8600, e:5} },
+        'ACEH':         { kkl_l: {p:7395, e:10}, kkl_r: {p:8500, e:10}, cmc: {p:8100, e:6}, jnt: {p:13300, e:7} },
+        'SAMARINDA':    { kkl_l: {p:4000, e:14}, kkl_r: {p:6500, e:6}, cmc: {p:0, e:0}, jnt: {p:10100, e:6} },
+        'JAMBI':        { kkl_l: {p:2958, e:6}, kkl_r: {p:3400, e:6}, cmc: {p:3500, e:6}, jnt: {p:9300, e:5} },
+        'BEKASI':       { kkl_l: {p:1131, e:2}, kkl_r: {p:1300, e:2}, cmc: {p:0, e:0}, jnt: {p:5000, e:2}, lalamove: {p:0, e:1} },
+        'JAKARTA':      { kkl_l: {p:1131, e:2}, kkl_r: {p:1300, e:2}, cmc: {p:0, e:0}, jnt: {p:5000, e:2}, lalamove: {p:0, e:1} },
+        'TANGERANG':    { kkl_l: {p:1131, e:2}, kkl_r: {p:1300, e:2}, cmc: {p:0, e:0}, jnt: {p:5000, e:2}, lalamove: {p:0, e:1} },
+        'BOGOR':        { kkl_l: {p:1131, e:2}, kkl_r: {p:1300, e:2}, cmc: {p:0, e:0}, jnt: {p:5000, e:2}, lalamove: {p:0, e:1} },
+        'BANDUNG':      { kkl_l: {p:1131, e:2}, kkl_r: {p:1300, e:2}, cmc: {p:0, e:0}, jnt: {p:5000, e:2}, lalamove: {p:0, e:1} },
+        'LAMPUNG':      { kkl_l: {p:1800, e:4}, kkl_r: {p:1800, e:4}, cmc: {p:0, e:0}, jnt: {p:8000, e:4} },
+        'DEFAULT':      { kkl_l: {p:5000, e:7}, kkl_r: {p:6000, e:5}, cmc: {p:7000, e:4}, jnt: {p:10000, e:5} }
+    };
+
+    // RAW CSV DATA (LACE IN MOTION HEYLOCAL)
+    const rawCsvLaceInMotionHeylocal = `
+SERIES;ARTICLE;SIZE;WARNA;QTY;HEYLOCAL BALIKPAPAN;Heylocal Makassar;Heylocal Samarinda;Heylocal Sungai Penuh;Heylocal Aceh;HEYLOCAL MEDAN OCBC;Heylocal Sunplaza Medan;Heylocal Pekanbaru;Heylocal Padang;Heylocal Palembang;HSC TP;Heylocal Sentul;Heylocal Pakuwon Mall Bekasi;Heylocal Summarecon Mall Bekasi;Heylocal SuMaBa;HSC PIM;Heylocal BXC Deal POS;Heylocal Pejaten;Heylocal Lampung;Heylocal Jambi
+LACE IN MOTION;VEST 1 (BROCADE OVAL);S-M;SKY BLUE;330;7;7;7;5;18;8;9;10;15;14;8;4;5;5;6;7;9;9;6;6
+LACE IN MOTION;VEST 1 (BROCADE OVAL);L-XL;SKY BLUE;220;4;5;5;4;12;5;6;6;11;9;5;3;3;3;4;5;6;6;4;4
+LACE IN MOTION;VEST 1 (BROCADE OVAL);S-M;KHAKI;396;8;9;9;6;22;9;11;11;17;17;10;5;6;6;8;8;11;11;7;7
+LACE IN MOTION;VEST 1 (BROCADE OVAL);L-XL;KHAKI;264;5;6;6;4;15;6;8;8;12;11;6;3;4;4;5;5;8;7;5;5
+LACE IN MOTION;VEST 1 (BROCADE OVAL);S-M;IVORY;428;9;10;10;7;24;10;11;12;19;18;11;5;7;7;8;9;12;12;8;8
+LACE IN MOTION;VEST 1 (BROCADE OVAL);L-XL;IVORY;286;6;7;7;4;16;7;8;8;13;12;7;4;4;4;5;6;8;8;5;5
+LACE IN MOTION;VEST 2 (KANCING BROCADE);S-M;BLACK;269;6;6;6;4;15;6;7;8;12;11;6;3;4;4;5;5;7;7;5;5
+LACE IN MOTION;VEST 2 (KANCING BROCADE);L-XL;BLACK;178;4;4;4;3;10;4;5;5;8;8;4;2;3;3;3;4;5;5;3;3
+LACE IN MOTION;VEST 2 (KANCING BROCADE);S-M;BEIGE;333;7;7;7;5;18;8;9;10;15;14;8;4;5;5;6;7;9;9;6;6
+LACE IN MOTION;VEST 2 (KANCING BROCADE);L-XL;BEIGE;222;4;5;5;4;12;5;6;6;10;9;5;3;3;3;4;5;6;6;4;4
+LACE IN MOTION;VEST 2 (KANCING BROCADE);S-M;BROKEN WHITE;320;7;7;7;5;18;7;8;9;14;13;8;4;5;5;6;7;9;9;6;6
+LACE IN MOTION;VEST 2 (KANCING BROCADE);L-XL;BROKEN WHITE;213;4;5;5;3;12;5;6;6;10;9;5;3;3;3;4;4;6;6;4;4
+LACE IN MOTION;DRESS 1 (Pita dada);S;BROKEN WHITE;150;3;3;3;2;8;3;4;4;7;6;4;2;2;2;3;3;4;4;3;3
+LACE IN MOTION;DRESS 1 (Pita dada);M;BROKEN WHITE;225;5;5;5;4;12;5;6;6;10;10;5;3;4;4;4;5;6;6;4;4
+LACE IN MOTION;DRESS 1 (Pita dada);L;BROKEN WHITE;225;5;5;5;4;12;5;6;6;10;10;5;3;4;4;4;5;6;6;4;4
+LACE IN MOTION;DRESS 1 (Pita dada);XL;BROKEN WHITE;150;3;3;3;2;8;3;4;4;7;6;4;2;2;2;3;3;4;4;3;3
+LACE IN MOTION;DRESS 1 (Pita dada);S;HITAM;100;2;2;2;2;6;2;3;3;4;4;2;1;2;2;2;2;3;3;2;2
+LACE IN MOTION;DRESS 1 (Pita dada);M;HITAM;150;3;3;3;2;8;3;4;4;7;6;4;2;2;2;3;3;4;4;3;3
+LACE IN MOTION;DRESS 1 (Pita dada);L;HITAM;150;3;3;3;2;8;3;4;4;7;6;4;2;2;2;3;3;4;4;3;3
+LACE IN MOTION;DRESS 1 (Pita dada);XL;HITAM;100;2;2;2;2;6;2;3;3;4;4;2;1;2;2;2;2;3;3;2;2
+LACE IN MOTION;DRESS 1 (Pita dada);S;NUDE;75;2;2;2;1;4;2;2;2;3;3;2;1;1;1;1;2;2;2;1;1
+LACE IN MOTION;DRESS 1 (Pita dada);M;NUDE;113;2;3;3;2;6;3;3;3;5;5;3;1;2;2;2;2;3;3;2;2
+LACE IN MOTION;DRESS 1 (Pita dada);L;NUDE;112;2;2;2;2;6;3;3;3;5;5;3;1;2;2;2;2;3;3;2;2
+LACE IN MOTION;DRESS 1 (Pita dada);XL;NUDE;75;2;2;2;1;4;2;2;2;3;3;2;1;1;1;1;2;2;2;1;1
+LACE IN MOTION;DRESS 2 ANAK SHUWA;S;SKY BLUE;25;0;1;1;0;1;1;1;1;1;1;1;0;0;0;0;1;1;1;0;0
+LACE IN MOTION;DRESS 2 ANAK SHUWA;M;SKY BLUE;25;0;1;1;0;1;1;1;1;1;1;1;0;0;0;0;1;1;1;0;0
+LACE IN MOTION;DRESS 2 ANAK SHUWA;L;SKY BLUE;25;0;1;1;0;1;1;1;1;1;1;1;0;0;0;0;1;1;1;0;0
+LACE IN MOTION;DRESS 2 ANAK SHUWA;S;IVORY;25;0;1;1;0;1;1;1;1;1;1;1;0;0;0;0;1;1;1;0;0
+LACE IN MOTION;DRESS 2 ANAK SHUWA;M;IVORY;25;0;1;1;0;1;1;1;1;1;1;1;0;0;0;0;1;1;1;0;0
+LACE IN MOTION;DRESS 2 ANAK SHUWA;L;IVORY;25;0;1;1;0;1;1;1;1;1;1;1;0;0;0;0;1;1;1;0;0
+LACE IN MOTION;DRESS 2 ANAK SHUWA;S;ABU TUA;25;0;1;1;0;1;1;1;1;1;1;1;0;0;0;0;1;1;1;0;0
+LACE IN MOTION;DRESS 2 ANAK SHUWA;M;ABU TUA;25;0;1;1;0;1;1;1;1;1;1;1;0;0;0;0;1;1;1;0;0
+LACE IN MOTION;DRESS 2 ANAK SHUWA;L;ABU TUA;25;0;1;1;0;1;1;1;1;1;1;1;0;0;0;0;1;1;1;0;0
+`;
+
+    let appState = {
+        view: 'heymale', 
+        allocations: {}, 
+        deadlines: {}, 
+        productionDates: {},
+        skuDetails: {} 
+    };
+
+    function init() {
+        const today = new Date();
+        const defaultDeadline = new Date();
+        defaultDeadline.setDate(today.getDate() + 20); 
+        
+        const prodInput = document.getElementById('dateProduction');
+        if (prodInput) {
+            prodInput.valueAsDate = today;
+        }
+        
+        const allSeries = new Set([...productStructure['HEYMALE'], ...productStructure['HEYLOCAL']]);
+        allSeries.forEach(s => {
+            appState.deadlines[s] = defaultDeadline.toISOString().split('T')[0];
+            appState.productionDates[s] = today.toISOString().split('T')[0];
+        });
+
+        // Initialize Allocations first
+        initializeAllocationsFromPredefined();
+        
+        // Parse and Store Hardcoded SKU Data for LACE IN MOTION HEYLOCAL
+        processRawCsv(rawCsvLaceInMotionHeylocal);
+
+        lucide.createIcons();
+        switchView('heymale');
+    }
+
+    // Process Hardcoded CSV
+    function processRawCsv(csvString) {
+        Papa.parse(csvString, {
+            header: true,
+            skipEmptyLines: true,
+            delimiter: ";", // IMPORTANT based on the file content provided
+            complete: function(results) {
+                processCSVData('LACE IN MOTION HEYLOCAL', results.data);
+            }
+        });
+    }
+
+    function initializeAllocationsFromPredefined() {
+        Object.keys(predefinedData).forEach(brand => {
+            Object.keys(predefinedData[brand]).forEach(series => {
+                const seriesData = predefinedData[brand][series];
+                storesList.forEach(store => {
+                    // Cek jika ada data untuk store ini
+                    if (seriesData[store.name]) {
+                        ensureAllocationExists(series, store.name);
+                        appState.allocations[series][store.name].weight = seriesData[store.name].kg;
+                        appState.allocations[series][store.name].qty = seriesData[store.name].qty;
+                    } 
+                    // Jika tidak ada data hardcoded (misal Jambi/Lampung), set 0 tapi pastikan objek alokasi ada
+                    else {
+                        ensureAllocationExists(series, store.name);
+                    }
+                });
+            });
+        });
+    }
+
+    function ensureAllocationExists(series, storeName) {
+        if (!appState.allocations[series]) appState.allocations[series] = {};
+        if (!appState.allocations[series][storeName]) appState.allocations[series][storeName] = { weight: 0, qty: 0, exp: 'kkl_l' };
+    }
+
+    function getLogisticData(city) {
+        return logisticsDB[city] || logisticsDB['DEFAULT'];
+    }
+
+    function switchView(viewName) {
+        appState.view = viewName;
+        ['heymale', 'heylocal', 'summary'].forEach(v => {
+            const nav = document.getElementById(`nav${v.charAt(0).toUpperCase() + v.slice(1)}`);
+            if(v === viewName) nav.classList.add('active');
+            else nav.classList.remove('active');
+        });
+
+        const titleEl = document.getElementById('pageTitle');
+        const subtitleEl = document.getElementById('pageSubtitle');
+        
+        if (viewName === 'heymale') {
+            titleEl.innerText = "Heymale Planner";
+            subtitleEl.innerText = "Menampilkan Semua Series Heymale";
+            renderBrandPage('HEYMALE');
+        } else if (viewName === 'heylocal') {
+            titleEl.innerText = "Heylocal Planner";
+            subtitleEl.innerText = "Menampilkan Semua Series Heylocal";
+            renderBrandPage('HEYLOCAL');
+        } else {
+            titleEl.innerText = "Executive Summary";
+            subtitleEl.innerText = "Ringkasan Total Semua Brand";
+            renderSummaryPage();
+        }
+    }
+
+    function renderCurrentView() {
+        switchView(appState.view);
+    }
+
+    function updateSeriesDate(seriesName, type, value) {
+        if(type === 'deadline') appState.deadlines[seriesName] = value;
+        if(type === 'production') appState.productionDates[seriesName] = value;
+        renderCurrentView();
+    }
+    
+    function updateGlobalDate(type, value) {
+        const allSeries = new Set([...productStructure['HEYMALE'], ...productStructure['HEYLOCAL']]);
+        allSeries.forEach(s => {
+            if(type === 'production') appState.productionDates[s] = value;
+        });
+        renderCurrentView();
+    }
+
+    // --- CSV PARSING & IMPORT LOGIC ---
+
+    function handleCSVImport(input) {
+        const files = input.files;
+        if (!files.length) return;
+
+        let filesProcessed = 0;
+        let totalFiles = files.length;
+
+        Array.from(files).forEach(file => {
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    processCSVData(file.name, results.data);
+                    filesProcessed++;
+                    if (filesProcessed === totalFiles) {
+                        alert("Semua data berhasil diimport! Detail SKU telah tersimpan.");
+                        renderCurrentView();
+                    }
+                }
+            });
+        });
+        input.value = '';
+    }
+
+    function processCSVData(filename, data) {
+        const fname = filename.toUpperCase();
+        let brand = 'HEYLOCAL'; // Default for hardcoded call
+        let series = 'LACE IN MOTION'; // Default for hardcoded call
+
+        // Logic for file upload
+        if(filename !== 'LACE IN MOTION HEYLOCAL') {
+             brand = fname.includes('HEYMALE') ? 'HEYMALE' : (fname.includes('HEYLOCAL') ? 'HEYLOCAL' : null);
+             series = null;
+             if (fname.includes('LUME')) series = 'LUME SERIES';
+             else if (fname.includes('ORNA')) series = 'ORNA BLOOM';
+             else if (fname.includes('LACE')) series = 'LACE IN MOTION';
+             else if (fname.includes('GARDEN')) series = 'GARDEN OF GRACE';
+        }
+
+        if (!brand || !series) return;
+
+        if (!appState.skuDetails[series]) appState.skuDetails[series] = {};
+
+        const sampleRow = data[0];
+        // Dynamic Column Matching
+        const storeColumns = Object.keys(sampleRow).filter(key => {
+            const k = key.toUpperCase();
+            return k.includes("HEYMALE") || k.includes("HEYLOCAL") || k.includes("HSC") || k.includes("BALIKPAPAN");
+        });
+
+        // Initialize sums for this file ONLY if it's an uploaded file (to update weights), 
+        // For hardcoded data, we assume predefinedData is source of truth for total weight/qty unless 0.
+        let storeSums = {}; 
+
+        data.forEach(row => {
+            const article = row['ARTICLE'] || row['Article'];
+            const size = row['SIZE'] || row['Size'];
+            const color = row['WARNA'] || row['Warna'] || row['COLOR'];
+
+            if (!article) return;
+
+            storeColumns.forEach(col => {
+                const qty = parseInt(row[col]) || 0;
+                if (qty > 0) {
+                    // Match CSV Column to Store List
+                    let matchedStore = storesList.find(s => col.toUpperCase().trim() === s.name.toUpperCase().trim());
+                    if (!matchedStore) {
+                        matchedStore = storesList.find(s => col.toUpperCase().includes(s.city) && col.toUpperCase().includes(brand));
+                    }
+
+                    if (matchedStore) {
+                        const storeName = matchedStore.name;
+                        
+                        // Save SKU Detail
+                        if (!appState.skuDetails[series][storeName]) appState.skuDetails[series][storeName] = [];
+                        appState.skuDetails[series][storeName].push({
+                            article: article, size: size, color: color, qty: qty
+                        });
+
+                        // Sum for potential updates
+                        if (!storeSums[storeName]) storeSums[storeName] = { qty: 0 };
+                        storeSums[storeName].qty += qty;
+                    }
+                }
+            });
+        });
+
+        // Update Allocations from CSV (Updates Jambi/Lampung if in CSV)
+        Object.keys(storeSums).forEach(storeName => {
+            ensureAllocationExists(series, storeName);
+            // Only overwrite if current qty is 0 (prevents overwriting good hardcoded totals with partial csvs)
+            // OR if it's the specific hardcoded load which is trusted.
+            if (appState.allocations[series][storeName].qty === 0 || filename === 'LACE IN MOTION HEYLOCAL') {
+                 appState.allocations[series][storeName].qty = storeSums[storeName].qty;
+            }
+            
+            if (appState.allocations[series][storeName].weight === 0) {
+                 appState.allocations[series][storeName].weight = storeSums[storeName].qty * 0.5;
+            }
+        });
+    }
+
+    // --- MODAL LOGIC ---
+
+    function openSkuModal(series, storeName) {
+        const modal = document.getElementById('skuModal');
+        const tbody = document.getElementById('modalTableBody');
+        const title = document.getElementById('modalTitle');
+        const subtitle = document.getElementById('modalSubtitle');
+        const totalEl = document.getElementById('modalTotalQty');
+
+        title.innerText = `Rincian SKU: ${series}`;
+        subtitle.innerText = storeName;
+        tbody.innerHTML = '';
+
+        const details = appState.skuDetails[series]?.[storeName] || [];
+        let total = 0;
+
+        if (details.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400 italic">Belum ada rincian SKU. Silakan upload file CSV untuk melihat detail per item.</td></tr>`;
+        } else {
+            details.forEach(item => {
+                total += item.qty;
+                const row = document.createElement('tr');
+                row.className = "border-b border-slate-50 hover:bg-slate-50";
+                row.innerHTML = `
+                    <td class="p-3 font-medium text-slate-700">${item.article}</td>
+                    <td class="p-3 font-mono text-xs">${item.size}</td>
+                    <td class="p-3 text-xs text-slate-500">${item.color}</td>
+                    <td class="p-3 text-right font-bold font-mono text-emerald-600">${item.qty}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        totalEl.innerText = total;
+        modal.classList.remove('hidden');
+    }
+
+    function closeSkuModal() {
+        document.getElementById('skuModal').classList.add('hidden');
+    }
+
+    // --- OPTIMIZER ---
+
+    function optimizeCurrentView() {
+        const currentBrand = appState.view === 'heymale' ? 'HEYMALE' : (appState.view === 'heylocal' ? 'HEYLOCAL' : null);
+        if(!currentBrand) { alert("Fitur ini hanya tersedia di halaman Planner."); return; }
+
+        const seriesList = productStructure[currentBrand];
+        let updatedCount = 0;
+
+        seriesList.forEach(seriesName => {
+            const currentDeadline = new Date(appState.deadlines[seriesName]);
+            const currentProdDate = new Date(appState.productionDates[seriesName]);
+
+            storesList.forEach(store => {
+                const sName = store.name.toUpperCase();
+                let isMatch = false;
+                if (currentBrand === 'HEYMALE') {
+                    if (sName.includes('HEYMALE')) isMatch = true;
+                } else {
+                    if (sName.includes('HEYLOCAL') || sName.includes('HSC') || sName.includes('BOONABOO')) isMatch = true;
+                }
+                if (!isMatch) return;
+
+                ensureAllocationExists(seriesName, store.name);
+                const allocation = appState.allocations[seriesName][store.name];
+                if (allocation.weight <= 0) return;
+
+                const logData = getLogisticData(store.city);
+                const options = [];
+                const exps = ['kkl_l', 'kkl_r', 'cmc', 'jnt'];
+                if (logData.lalamove) exps.push('lalamove');
+
+                exps.forEach(expKey => {
+                    let rateInfo = (expKey === 'lalamove') ? logData.lalamove : (expKey === 'cmc' ? (logData.cmc.p > 0 ? logData.cmc : {p:0, e:99}) : logData[expKey]);
+                    const cost = allocation.weight * rateInfo.p;
+                    const arrivalDate = new Date(currentProdDate);
+                    arrivalDate.setDate(arrivalDate.getDate() + rateInfo.e);
+                    
+                    options.push({ key: expKey, cost: cost, arrival: arrivalDate, days: rateInfo.e, isSafe: arrivalDate <= currentDeadline });
+                });
+
+                const safeOptions = options.filter(o => o.isSafe);
+                let bestOption = safeOptions.length > 0 ? safeOptions.sort((a, b) => a.cost - b.cost)[0] : options.sort((a, b) => a.days - b.days)[0];
+
+                if (bestOption && bestOption.key !== allocation.exp) {
+                    allocation.exp = bestOption.key;
+                    updatedCount++;
+                }
+            });
+        });
+        renderCurrentView();
+        alert(`Optimasi Selesai! ${updatedCount} pengiriman diperbarui.`);
+    }
+
+    // --- RENDERERS ---
+
+    function renderBrandPage(brandName) {
+        const container = document.getElementById('dynamicContent');
+        container.innerHTML = '';
+        let pageTotalCost = 0, pageLateCount = 0, pageSafeCount = 0;
+        
+        const seriesList = productStructure[brandName];
+
+        seriesList.forEach(seriesName => {
+            const currentDeadline = appState.deadlines[seriesName];
+            const currentProdDate = appState.productionDates[seriesName];
+            const prodDateObj = new Date(currentProdDate);
+            const deadDateObj = new Date(currentDeadline);
+
+            const section = document.createElement('div');
+            section.className = "bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8";
+            
+            section.innerHTML = `
+                <div class="px-6 py-4 border-b border-slate-100 bg-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-lg">${seriesName}</h3>
+                        <p class="text-xs text-slate-500 font-bold uppercase tracking-wider">${brandName} Collection</p>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded border border-slate-200 shadow-sm">
+                            <label class="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Produksi:</label>
+                            <input type="date" value="${currentProdDate}" onchange="updateSeriesDate('${seriesName}', 'production', this.value)" class="text-xs font-bold text-slate-700 outline-none bg-transparent cursor-pointer">
+                        </div>
+                        <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded border border-slate-200 shadow-sm">
+                            <label class="text-[10px] font-bold text-red-500 uppercase tracking-wide">Deadline:</label>
+                            <input type="date" value="${currentDeadline}" onchange="updateSeriesDate('${seriesName}', 'deadline', this.value)" class="text-xs font-bold text-slate-700 outline-none bg-transparent cursor-pointer">
+                        </div>
+                        <div class="px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded text-xs font-bold text-emerald-700 shadow-sm min-w-[120px] text-right"><span id="total-${seriesName.replace(/\s/g,'')}">Rp 0</span></div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-500">
+                            <tr>
+                                <th class="p-4 font-bold w-64">Store / Destination</th>
+                                <th class="p-4 font-bold w-24">QTY (Pcs)</th>
+                                <th class="p-4 font-bold w-24">Berat (KG)</th>
+                                <th class="p-4 font-bold">Ekspedisi</th>
+                                <th class="p-4 font-bold text-center">Est. Tiba</th>
+                                <th class="p-4 font-bold text-right">Biaya</th>
+                                <th class="p-4 font-bold text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-${seriesName.replace(/\s/g,'')}" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            `;
+            container.appendChild(section);
+            const tbody = section.querySelector('tbody');
+            let seriesTotal = 0;
+
+            storesList.forEach(store => {
+                const sName = store.name.toUpperCase();
+                let isMatch = false;
+                if (brandName === 'HEYMALE') { if (sName.includes('HEYMALE')) isMatch = true; } 
+                else { if (sName.includes('HEYLOCAL') || sName.includes('HSC') || sName.includes('BOONABOO')) isMatch = true; }
+                if (!isMatch) return;
+
+                ensureAllocationExists(seriesName, store.name);
+                const data = appState.allocations[seriesName][store.name];
+                const logData = getLogisticData(store.city);
+                let rateInfo = {};
+                if (data.exp === 'kkl_l') rateInfo = logData.kkl_l;
+                else if (data.exp === 'kkl_r') rateInfo = logData.kkl_r;
+                else if (data.exp === 'cmc') rateInfo = (logData.cmc.p > 0 ? logData.cmc : {p:0, e:99});
+                else if (data.exp === 'lalamove') rateInfo = logData.lalamove || {p:0, e:99};
+                else rateInfo = logData.jnt;
+
+                const cost = data.weight * rateInfo.p;
+                const arrivalDate = new Date(prodDateObj);
+                arrivalDate.setDate(arrivalDate.getDate() + rateInfo.e);
+                const isLate = arrivalDate > deadDateObj;
+
+                if (data.weight > 0) {
+                    pageTotalCost += cost; seriesTotal += cost;
+                    if(isLate) pageLateCount++; else pageSafeCount++;
+                }
+
+                const hasLalamove = !!logData.lalamove;
+                const row = document.createElement('tr');
+                row.className = `hover:bg-slate-50 transition ${isLate && data.weight > 0 ? 'bg-red-50' : ''}`;
+                row.innerHTML = `
+                    <td class="p-4">
+                        <div class="font-bold text-slate-700">${store.name}</div>
+                        <button onclick="openSkuModal('${seriesName}', '${store.name}')" class="text-[10px] text-blue-500 font-bold hover:text-blue-700 flex items-center gap-1 mt-1 transition">
+                            <i data-lucide="eye" class="w-3 h-3"></i> Lihat Rincian
+                        </button>
+                    </td>
+                    <td class="p-4">
+                        <div class="w-20 p-1 border border-slate-200 bg-slate-50 rounded text-center text-xs font-mono font-bold text-slate-500 cursor-not-allowed">${data.qty || 0}</div>
+                    </td>
+                    <td class="p-4">
+                        <input type="number" value="${data.weight}" onchange="updateAllocation('${seriesName}', '${store.name}', 'weight', this.value)" class="w-20 p-1 border rounded text-center text-xs font-mono font-bold focus:ring-2 ring-emerald-200 outline-none">
+                    </td>
+                    <td class="p-4">
+                        <select onchange="updateAllocation('${seriesName}', '${store.name}', 'exp', this.value)" class="p-1.5 border rounded text-xs font-semibold text-slate-600 bg-white shadow-sm outline-none w-full">
+                            <option value="kkl_l" ${data.exp==='kkl_l'?'selected':''}>KKL Laut</option>
+                            <option value="kkl_r" ${data.exp==='kkl_r'?'selected':''}>KKL Reg</option>
+                            <option value="cmc" ${data.exp==='cmc'?'selected':''} ${logData.cmc.p===0?'disabled':''}>CMC</option>
+                            <option value="jnt" ${data.exp==='jnt'?'selected':''}>JNT</option>
+                            ${hasLalamove ? `<option value="lalamove" ${data.exp==='lalamove'?'selected':''} class="text-orange-600 font-bold">Lalamove</option>` : ''}
+                        </select>
+                    </td>
+                    <td class="p-4 text-center">
+                        <div class="font-bold text-xs text-slate-600">${data.exp === 'lalamove' ? 'Instant' : arrivalDate.toLocaleDateString('id-ID', {day:'numeric', month:'short'})}</div>
+                    </td>
+                    <td class="p-4 text-right">
+                        <div class="font-mono font-bold text-slate-700">${data.exp === 'lalamove' ? '<span class="text-xs text-orange-600 italic">Cek App</span>' : 'Rp ' + cost.toLocaleString('id-ID')}</div>
+                    </td>
+                    <td class="p-4 text-center">
+                        ${data.weight > 0 ? (isLate ? '<span class="text-[10px] font-bold text-red-600">TELAT</span>' : '<span class="text-[10px] font-bold text-emerald-600">AMAN</span>') : '<span class="text-[10px] text-slate-300">-</span>'}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            section.querySelector(`#total-${seriesName.replace(/\s/g,'')}`).innerText = `Total: Rp ${seriesTotal.toLocaleString('id-ID')}`;
+        });
+        document.getElementById('sidebarTotalCost').innerText = `Rp ${pageTotalCost.toLocaleString('id-ID')}`;
+        document.getElementById('sidebarCountLate').innerText = pageLateCount;
+        document.getElementById('sidebarCountSafe').innerText = pageSafeCount;
+        lucide.createIcons();
+    }
+
+    function renderSummaryPage() {
+        const container = document.getElementById('dynamicContent');
+        container.innerHTML = `
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 bg-slate-50">
+                    <h3 class="font-bold text-slate-800 text-lg">Total Recap (All Brands)</h3>
+                </div>
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-emerald-50 border-b border-emerald-100 text-[10px] uppercase text-emerald-800">
+                        <tr>
+                            <th class="p-4 font-bold">Brand</th>
+                            <th class="p-4 font-bold">Series Name</th>
+                            <th class="p-4 font-bold text-center">Total Toko</th>
+                            <th class="p-4 font-bold text-center">Total Berat</th>
+                            <th class="p-4 font-bold text-right">Total Biaya</th>
+                            <th class="p-4 font-bold text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                </table>
+            </div>
+        `;
+        const tbody = document.getElementById('summaryTableBody');
+        let grandTotal = 0, grandLate = 0;
+
+        Object.keys(productStructure).forEach(brand => {
+            productStructure[brand].forEach(series => {
+                let totalWeight = 0, totalCost = 0, activeStores = 0, lateStores = 0;
+                const currentProdDate = new Date(appState.productionDates[series]);
+                const currentDeadDate = new Date(appState.deadlines[series]);
+                const seriesData = appState.allocations[series];
+
+                if (seriesData) {
+                    Object.keys(seriesData).forEach(storeName => {
+                        const sData = seriesData[storeName];
+                        if (sData.weight > 0) {
+                            const storeObj = storesList.find(s => s.name === storeName);
+                            if(storeObj) {
+                                const sName = storeName.toUpperCase();
+                                let isMatch = false;
+                                if (brand === 'HEYMALE') { if (sName.includes('HEYMALE')) isMatch = true; } 
+                                else { if (sName.includes('HEYLOCAL') || sName.includes('HSC') || sName.includes('BOONABOO')) isMatch = true; }
+                                
+                                if(isMatch) {
+                                    const logData = getLogisticData(storeObj.city);
+                                    let rateInfo = (sData.exp === 'lalamove') ? logData.lalamove : (sData.exp === 'cmc' ? (logData.cmc.p > 0 ? logData.cmc : {p:0, e:99}) : logData[sData.exp]);
+                                    const cost = sData.weight * rateInfo.p;
+                                    const arrival = new Date(currentProdDate);
+                                    arrival.setDate(arrival.getDate() + rateInfo.e);
+                                    totalWeight += sData.weight; totalCost += cost; activeStores++;
+                                    if (arrival > currentDeadDate) lateStores++;
+                                }
+                            }
+                        }
+                    });
+                }
+                if (activeStores === 0) return;
+                grandTotal += totalCost; if(lateStores > 0) grandLate += lateStores;
+
+                const row = document.createElement('tr');
+                row.className = "hover:bg-slate-50";
+                row.innerHTML = `
+                    <td class="p-4 font-bold text-slate-500 text-xs">${brand}</td>
+                    <td class="p-4 font-bold text-slate-800 text-sm">${series}</td>
+                    <td class="p-4 text-center text-xs font-mono">${activeStores} Toko <span class="text-[9px] text-slate-400 block">(${brand === 'HEYMALE' ? 'Max 9' : 'Max 20'})</span></td>
+                    <td class="p-4 text-center text-xs font-mono font-bold">${totalWeight.toFixed(1)} Kg</td>
+                    <td class="p-4 text-right font-mono font-bold text-emerald-700">Rp ${totalCost.toLocaleString('id-ID')}</td>
+                    <td class="p-4 text-center">${lateStores > 0 ? `<span class="bg-red-100 text-red-700 px-2 py-1 rounded text-[10px] font-bold">${lateStores} Toko Telat</span>` : `<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold">Semua Aman</span>`}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        });
+        document.getElementById('sidebarTotalCost').innerText = `Rp ${grandTotal.toLocaleString('id-ID')}`;
+        document.getElementById('sidebarCountLate').innerText = grandLate;
+        document.getElementById('sidebarCountSafe').innerText = "All Others";
+    }
+
+    function updateAllocation(seriesName, storeName, field, value) {
+        ensureAllocationExists(seriesName, storeName);
+        const data = appState.allocations[seriesName][storeName];
+        if (field === 'weight') data.weight = parseFloat(value) || 0;
+        if (field === 'exp') data.exp = value;
+        renderCurrentView(); 
+    }
+
+    function exportData() {
+        let flatData = [];
+        Object.keys(appState.allocations).forEach(series => {
+            const stores = appState.allocations[series];
+            Object.keys(stores).forEach(storeName => {
+                const d = stores[storeName];
+                if (d.weight > 0) {
+                     flatData.push({
+                         'Series': series,
+                         'Store Name': storeName,
+                         'Qty (Pcs)': d.qty || 0,
+                         'Weight (Kg)': d.weight,
+                         'Expedition': d.exp,
+                     });
+                }
+            });
+        });
+        if (flatData.length === 0) { alert("No data to export!"); return; }
+        const ws = XLSX.utils.json_to_sheet(flatData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "DistributionPlan");
+        XLSX.writeFile(wb, "Raya_Full_Plan.xlsx");
+    }
+
+    // Attach init to window onload to ensure DOM elements exist
+    window.onload = init;
+</script>
+</body>
+</html>
